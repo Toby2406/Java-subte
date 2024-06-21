@@ -164,12 +164,29 @@ public class Proyecto_137841_130621 implements Proyecto{
 			//Busqueda de lineas
 			Linea LOrige = BuscarLinea(origen);
 			Linea LDestino = BuscarLinea(destino);
-					
-			if(LOrige.equals(LDestino)){ //Si el viaje es en la misma linea
+			//DETERMIAR SI LAS LINEAS ESTAN COMBINADAS.	
+			
+			if(LOrige.equals(LDestino) || EstanCombinadas(LOrige, LDestino, router)){ //Si el viaje es en la misma linea
+				if(DesAnterioaO(origen, destino, LDestino))
+				{
+					v  = ViajeSubte.getBackwardsBuilder()
+							.setDestino(destino, LDestino)
+							.agregarDireccion(origen, LDestino.getCabeceraInicial(), LDestino)
+							.setOrigenAndBuild(origen, LDestino);
+				}else
+				{
+					v = ViajeSubte.getForwardsBuilder()
+							.setOrigen(origen, LDestino)
+							.agregarDireccion(destino, LDestino.getCabeceraFinal(), LDestino)
+							.setDestinoAndBuild(destino, LDestino);
+				}
+			}
+			else {
 				v = ViajeSubte.getForwardsBuilder()
 						.setOrigen(origen, LOrige)
-						.agregarDireccion(destino, LOrige.getCabeceraFinal(), LOrige)
-						.setDestinoAndBuild(destino, LOrige);
+						.agregarDireccion(EstacionCombinada(LOrige, LDestino, router), LOrige.getCabeceraFinal(), LOrige)
+						.agregarCombinacion(LDestino)
+						.setDestinoAndBuild(destino, LDestino);
 			}
 			
 								
@@ -198,8 +215,9 @@ public class Proyecto_137841_130621 implements Proyecto{
 			//Buscar dentro de diccionario de viaje la linea correspondiente a la estacion
 			Linea resultado = null;
 			Iterator<Entry<Linea,Estacion>> it = diccionarioViaje.entries().iterator();
+		
 			while(it.hasNext() && resultado == null)
-			{
+			{ 
 				Entry<Linea,Estacion> entrada = it.next();
 				if(entrada.getValue().equals(e))
 				{
@@ -210,8 +228,26 @@ public class Proyecto_137841_130621 implements Proyecto{
 			return resultado;
 		}
 		
+		public boolean EstanCombinadas(Linea LO, Linea LD, Router r)
+		{//Controla si las lineas estan combinadas
+			boolean resultado = false;
+			
+			Iterator<Par<Linea,Estacion>> it = r.getCombinaciones(LD).iterator();
+			
+			while(it.hasNext() && !false)
+			{
+				Par<Linea,Estacion> p = it.next();
+				
+				if(p.getFirst().equals(LO))
+				{
+					resultado = true;
+				}
+			}
+			return resultado;
+		}
+		
 		protected boolean DesAnterioaO(Estacion origen, Estacion destino, Linea l)
-		{
+		{//Controla la direccion del viaje
 			boolean resultado = false;
 			
 			Estacion cursor = origen;
@@ -223,6 +259,26 @@ public class Proyecto_137841_130621 implements Proyecto{
 					resultado = true;
 				}
 				cursor = l.viajarHaciaCabeceraInicial(cursor);
+			}
+			
+			return resultado;
+		}
+		
+		protected Estacion EstacionCombinada(Linea origen, Linea destino, Router r)
+		{//RETORNA LA ESTACION DONDE COLICIONAN AMBAS LINEAS	q
+			Estacion resultado = null;
+			
+			Iterator<Par<Linea,Estacion>> it = r.getCombinaciones(origen).iterator();
+			
+			while(it.hasNext() && resultado == null)
+			{
+			
+				Par<Linea,Estacion> p = it.next();
+				
+				if(p.getFirst().equals(destino))
+				{
+					resultado = p.getSecond();
+				}
 			}
 			
 			return resultado;
