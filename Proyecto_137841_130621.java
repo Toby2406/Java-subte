@@ -97,7 +97,7 @@ public class Proyecto_137841_130621 implements Proyecto{
 			combinaciones = new DiccionarioHashAbierto<Linea,Par<Linea,Estacion>>();
 			PositionList<Par<Linea,Estacion>> ListaPar = new ListaDoblementeEnlazada<Par<Linea,Estacion>>();
 					
-			//Carga de elemetos en Queue
+			//Carga de elemetos en lista
 			for(Entry<Estacion,Linea> entrada : diccionario.entries()) {
 				Par<Linea,Estacion> p = new Par<Linea,Estacion>(entrada.getValue(),entrada.getKey());
 				ListaPar.addLast(p);			
@@ -164,7 +164,7 @@ public class Proyecto_137841_130621 implements Proyecto{
 			//Busqueda de lineas
 			Linea LOrige = BuscarLinea(origen);
 			Linea LDestino = BuscarLinea(destino);
-			//DETERMIAR SI LAS LINEAS ESTAN COMBINADAS.	
+			
 			
 			if(LOrige.equals(LDestino) || EstanCombinadas(LOrige, LDestino, router)){ //Si el viaje es en la misma linea
 				if(DesAnterioaO(origen, destino, LDestino))
@@ -184,8 +184,9 @@ public class Proyecto_137841_130621 implements Proyecto{
 			else {
 				v = ViajeSubte.getForwardsBuilder()
 						.setOrigen(origen, LOrige)
-						.agregarDireccion(EstacionCombinada(LOrige, LDestino, router), LOrige.getCabeceraFinal(), LOrige)
+						.agregarDireccion(EstacionCombinada(LOrige, LDestino, router), LOrige.getCabeceraInicial(), LOrige)
 						.agregarCombinacion(LDestino)
+						.agregarDireccion(destino, LDestino.getCabeceraFinal(), LDestino)
 						.setDestinoAndBuild(destino, LDestino);
 			}
 			
@@ -265,7 +266,7 @@ public class Proyecto_137841_130621 implements Proyecto{
 		}
 		
 		protected Estacion EstacionCombinada(Linea origen, Linea destino, Router r)
-		{//RETORNA LA ESTACION DONDE COLICIONAN AMBAS LINEAS	q
+		{//RETORNA LA ESTACION DONDE COLICIONAN AMBAS LINEAS	
 			Estacion resultado = null;
 			
 			Iterator<Par<Linea,Estacion>> it = r.getCombinaciones(origen).iterator();
@@ -279,6 +280,27 @@ public class Proyecto_137841_130621 implements Proyecto{
 				{
 					resultado = p.getSecond();
 				}
+			}
+			
+			return resultado;
+		}
+		
+		protected PositionList<Linea> LineasARecorrer(Linea origen, Linea destino, Router r)
+		{
+			//SE GENERA UNA LISTA CON TODAS LAS LINEAS QUE SE DEBEN RECORRER PARA LLEGAR A DESTINO
+			//obtenemos las combinaciones de destino que tengan relacion con origen.
+			
+			PositionList<Linea> resultado = new ListaDoblementeEnlazada<Linea>();
+			
+			Linea cursor = origen;
+			
+			Iterator<Par<Linea,Estacion>> it = r.getCombinaciones(destino).iterator();
+			
+			while(it.hasNext())
+			{
+				Par<Linea,Estacion> p = it.next();
+				
+				
 			}
 			
 			return resultado;
