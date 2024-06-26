@@ -289,20 +289,28 @@ public class Proyecto_137841_130621 implements Proyecto{
 		{
 			//SE GENERA UNA LISTA CON TODAS LAS LINEAS QUE SE DEBEN RECORRER PARA LLEGAR A DESTINO
 			//obtenemos las combinaciones de destino que tengan relacion con origen.
-			
-			PositionList<Linea> resultado = new ListaDoblementeEnlazada<Linea>();
-			
-			Linea cursor = origen;
-			
-			Iterator<Par<Linea,Estacion>> it = r.getCombinaciones(destino).iterator();
-			
-			while(it.hasNext())
+				
+			if(!destino.equals(origen))
 			{
-				Par<Linea,Estacion> p = it.next();
+				Iterator<Par<Linea,Estacion>> it = r.getCombinaciones(destino).iterator();
 				
-				
-			}
-			
-			return resultado;
+				while(it.hasNext())
+				{
+					Par<Linea,Estacion> p = it.next();
+					Iterator<Par<Linea,Estacion>> it2 = r.getCombinaciones(p.getFirst()).iterator();
+					
+					while(it2.hasNext())
+					{
+						if(it2.next().getFirst().equals(origen))
+						{
+							lista.addLast(p.getFirst());
+							destino = origen;
+						}
+						else
+						{
+							LineasARecorrer(origen, it2.next().getFirst(), r, lista);
+						}
+					}
+				}
 		}
 	}
