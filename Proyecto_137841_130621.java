@@ -2,6 +2,7 @@ package ar.edu.uns.cs.ed.proyectos.subtes.routing.proyecto;
 
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Queue;
 
 import ar.edu.uns.cs.ed.proyectos.subtes.entities.Estacion;
 import ar.edu.uns.cs.ed.proyectos.subtes.entities.Linea;
@@ -11,6 +12,7 @@ import ar.edu.uns.cs.ed.proyectos.subtes.routing.RouterSubte.PrecomputationBuild
 import ar.edu.uns.cs.ed.proyectos.subtes.routing.util.Par;
 import ar.edu.uns.cs.ed.proyectos.subtes.routing.Viaje;
 import ar.edu.uns.cs.ed.proyectos.subtes.routing.ViajeSubte;
+import ar.edu.uns.cs.ed.proyectos.subtes.routing.ViajeSubte.BackwardsMiddleStartBuilder;
 import ar.edu.uns.cs.ed.proyectos.subtes.tdas.exceptions.InvalidKeyException;
 import ar.edu.uns.cs.ed.proyectos.subtes.tdas.tdadiccionario.DiccionarioHashAbierto;
 import ar.edu.uns.cs.ed.proyectos.subtes.tdas.tdadiccionario.Dictionary;
@@ -182,18 +184,54 @@ public class Proyecto_137841_130621 implements Proyecto{
 				}
 			}
 			else {
-				v = ViajeSubte.getForwardsBuilder()
-						.setOrigen(origen, LOrige)
-						.agregarDireccion(EstacionCombinada(LOrige, LDestino, router), LOrige.getCabeceraInicial(), LOrige)
-						.agregarCombinacion(LDestino)
-						.agregarDireccion(destino, LDestino.getCabeceraFinal(), LDestino)
-						.setDestinoAndBuild(destino, LDestino);
+				Queue<Linea> lista = new LinkedList<Linea>();
+				
+				LineasARecorrer(LOrige, LDestino, router, lista);
+				
+				
+				//v = (Viaje) ViajeSubte.getForwardsBuilder().setOrigen(origen, LOrige);
+				ViajeSubte.ForwardsMiddleEndBuilder aux = ViajeSubte.getForwardsBuilder().setOrigen(origen, LOrige);
+				Preorden(lista, LOrige,origen, aux,router);
+						
+				aux.agregarDireccion(destino, LDestino.getCabeceraInicial(), LDestino)
+				.setDestinoAndBuild(destino, LDestino);
+				
+				v = (Viaje) aux;
 			}
 			
 								
 			return v;
 		}
-		
+		protected void Preorden(Queue<Linea> li, Linea Lorigen, Estacion origen, ViajeSubte.ForwardsMiddleEndBuilder v, Router r)
+		{
+			Linea o = Lorigen;
+			Estacion e = origen;
+			while(!(li.isEmpty()))
+			{
+				Estacion combinacion = EstacionCombinada(o, li.peek(), r);
+				
+				if(combinacion != null)
+				{
+					if(DesAnterioaO(origen, li.peek().getCabeceraInicial(), Lorigen))
+					{
+						v.agregarDireccion(combinacion, e, o)
+						.agregarCombinacion(li.peek());
+						o = li.peek();
+						e = li.poll().getCabeceraInicial();
+				}
+					else
+					{
+						v.agregarDireccion(combinacion, e, o)
+						.agregarCombinacion(li.peek());
+						o = li.peek();
+						e = li.poll().getCabeceraInicial();
+					}
+					
+				}
+			}
+			
+			
+		}
 		protected void RellenarDiccionarioviaje(Router r)
 		{
 			diccionarioViaje = new DiccionarioHashAbierto<Linea, Estacion>();
@@ -233,13 +271,13 @@ public class Proyecto_137841_130621 implements Proyecto{
 		{//Controla si las lineas estan combinadas
 			boolean resultado = false;
 			
-			Iterator<Par<Linea,Estacion>> it = r.getCombinaciones(LD).iterator();
+			Iterator<Par<Linea,Estacion>> it = r.getCombinaciones(LO).iterator();
 			
 			while(it.hasNext() && !false)
 			{
 				Par<Linea,Estacion> p = it.next();
 				
-				if(p.getFirst().equals(LO))
+				if(p.getFirst().equals(LD))
 				{
 					resultado = true;
 				}
@@ -285,32 +323,42 @@ public class Proyecto_137841_130621 implements Proyecto{
 			return resultado;
 		}
 		
-		protected PositionList<Linea> LineasARecorrer(Linea origen, Linea destino, Router r)
+		protected void LineasARecorrer(Linea origen, Linea destino, Router r, Queue<Linea> lista)
 		{
 			//SE GENERA UNA LISTA CON TODAS LAS LINEAS QUE SE DEBEN RECORRER PARA LLEGAR A DESTINO
 			//obtenemos las combinaciones de destino que tengan relacion con origen.
-				
+			
 			if(!destino.equals(origen))
 			{
 				Iterator<Par<Linea,Estacion>> it = r.getCombinaciones(destino).iterator();
 				
-				while(it.hasNext())
+				while(it.hasNext() && !(destino.equals(origen)))
 				{
 					Par<Linea,Estacion> p = it.next();
 					Iterator<Par<Linea,Estacion>> it2 = r.getCombinaciones(p.getFirst()).iterator();
 					
-					while(it2.hasNext())
+					if(p.getFirst().equals(origen))
 					{
-						if(it2.next().getFirst().equals(origen))
+						lista.add(p.getFirst());
+						destino = origen;
+					}else {
+						while(it2.hasNext() && !(destino.equals(origen)))
 						{
-							lista.addLast(p.getFirst());
-							destino = origen;
-						}
-						else
-						{
-							LineasARecorrer(origen, it2.next().getFirst(), r, lista);
+							if(it2.next().getFirst().equals(origen))
+							{
+								lista.add(p.getFirst());
+								destino = origen;
+							}
+							else
+							{
+								LineasARecorrer(origen, it2.next().getFirst(), r, lista);
+							}
 						}
 					}
 				}
+				
+			}
 		}
+		
+		
 	}
