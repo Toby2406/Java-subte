@@ -3,6 +3,7 @@ package ar.edu.uns.cs.ed.proyectos.subtes.routing.proyecto;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.Stack;
 
 import ar.edu.uns.cs.ed.proyectos.subtes.entities.Estacion;
 import ar.edu.uns.cs.ed.proyectos.subtes.entities.Linea;
@@ -169,31 +170,21 @@ public class Proyecto_137841_130621 implements Proyecto{
 			
 			
 			if(LOrige.equals(LDestino) || EstanCombinadas(LOrige, LDestino, router)){ //Si el viaje es en la misma linea
-				if(DesAnterioaO(origen, destino, LDestino))
-				{
-					v  = ViajeSubte.getBackwardsBuilder()
-							.setDestino(destino, LDestino)
-							.agregarDireccion(origen, LDestino.getCabeceraInicial(), LDestino)
-							.setOrigenAndBuild(origen, LDestino);
-				}else
-				{
 					v = ViajeSubte.getForwardsBuilder()
 							.setOrigen(origen, LDestino)
-							.agregarDireccion(destino, LDestino.getCabeceraFinal(), LDestino)
+							.agregarDireccion(destino, buscarCabeceraDeAaB(origen, destino, LDestino), LDestino)
 							.setDestinoAndBuild(destino, LDestino);
-				}
 			}
 			else {
-				Queue<Linea> lista = new LinkedList<Linea>();
+				Stack<Linea> lista = new Stack<Linea>();
 				
 				LineasARecorrer(LOrige, LDestino, router, lista);
 				
-				
-				//v = (Viaje) ViajeSubte.getForwardsBuilder().setOrigen(origen, LOrige);
 				ViajeSubte.ForwardsMiddleEndBuilder aux = ViajeSubte.getForwardsBuilder().setOrigen(origen, LOrige);
+				
 				Preorden(lista, LOrige,origen, aux,router);
 						
-				aux.agregarDireccion(destino, LDestino.getCabeceraInicial(), LDestino)
+				aux.agregarDireccion(destino, LDestino.getCabeceraFinal(), LDestino)
 				.setDestinoAndBuild(destino, LDestino);
 				
 				v = (Viaje) aux;
@@ -202,7 +193,7 @@ public class Proyecto_137841_130621 implements Proyecto{
 								
 			return v;
 		}
-		protected void Preorden(Queue<Linea> li, Linea Lorigen, Estacion origen, ViajeSubte.ForwardsMiddleEndBuilder v, Router r)
+		protected void Preorden(Stack<Linea> li, Linea Lorigen, Estacion origen, ViajeSubte.ForwardsMiddleEndBuilder v, Router r)
 		{
 			Linea o = Lorigen;
 			Estacion e = origen;
@@ -212,25 +203,38 @@ public class Proyecto_137841_130621 implements Proyecto{
 				
 				if(combinacion != null)
 				{
-					if(DesAnterioaO(origen, li.peek().getCabeceraInicial(), Lorigen))
-					{
-						v.agregarDireccion(combinacion, e, o)
-						.agregarCombinacion(li.peek());
-						o = li.peek();
-						e = li.poll().getCabeceraInicial();
-				}
-					else
-					{
-						v.agregarDireccion(combinacion, e, o)
-						.agregarCombinacion(li.peek());
-						o = li.peek();
-						e = li.poll().getCabeceraInicial();
-					}
+					
+					v.agregarDireccion(combinacion, buscarCabeceraDeAaB(e, combinacion, o), o)
+					.agregarCombinacion(li.peek());
+					o = li.peek();
+					e = li.pop().getCabeceraInicial();
 					
 				}
 			}
 			
 			
+		}
+		
+		protected Estacion buscarCabeceraDeAaB(Estacion A, Estacion B, Linea l )
+		{
+			//Busca la dirrecion de la cabecera pra viajar de A a B por l.
+			//Arranco desde A en direccion a la cabecera final, obtengo la siguiente estacion. comparo sies b
+			// sin sigo, si encunetro B se viaja por cabecera final sino por cabecera inicial.
+			
+			Estacion resultado = l.getCabeceraInicial();
+			
+			Estacion cursor = A;
+			
+			while(cursor != null && resultado == l.getCabeceraInicial())
+			{
+				if(cursor.equals(B))
+				{
+					resultado = l.getCabeceraFinal();
+				}
+				cursor = l.viajarHaciaCabeceraFinal(cursor);
+			}
+			
+			return resultado;
 		}
 		protected void RellenarDiccionarioviaje(Router r)
 		{
@@ -285,23 +289,6 @@ public class Proyecto_137841_130621 implements Proyecto{
 			return resultado;
 		}
 		
-		protected boolean DesAnterioaO(Estacion origen, Estacion destino, Linea l)
-		{//Controla la direccion del viaje
-			boolean resultado = false;
-			
-			Estacion cursor = origen;
-			
-			while(cursor != null)
-			{
-				if(cursor.equals(destino))
-				{
-					resultado = true;
-				}
-				cursor = l.viajarHaciaCabeceraInicial(cursor);
-			}
-			
-			return resultado;
-		}
 		
 		protected Estacion EstacionCombinada(Linea origen, Linea destino, Router r)
 		{//RETORNA LA ESTACION DONDE COLICIONAN AMBAS LINEAS	
@@ -323,42 +310,30 @@ public class Proyecto_137841_130621 implements Proyecto{
 			return resultado;
 		}
 		
-		protected void LineasARecorrer(Linea origen, Linea destino, Router r, Queue<Linea> lista)
+		protected void LineasARecorrer(Linea origen, Linea destino, Router r, Stack<Linea> lista)
 		{
 			//SE GENERA UNA LISTA CON TODAS LAS LINEAS QUE SE DEBEN RECORRER PARA LLEGAR A DESTINO
 			//obtenemos las combinaciones de destino que tengan relacion con origen.
-			
-			if(!destino.equals(origen))
-			{
-				Iterator<Par<Linea,Estacion>> it = r.getCombinaciones(destino).iterator();
+				if(!origen.equals(destino)) {
 				
-				while(it.hasNext() && !(destino.equals(origen)))
-				{
-					Par<Linea,Estacion> p = it.next();
-					Iterator<Par<Linea,Estacion>> it2 = r.getCombinaciones(p.getFirst()).iterator();
+					lista.add(destino); 
 					
-					if(p.getFirst().equals(origen))
+					if(!EstanCombinadas(origen, destino, r) && !r.getCombinaciones(destino).iterator().hasNext())
 					{
-						lista.add(p.getFirst());
+						lista.clear();	
+					}
+					
+					if(EstanCombinadas(origen, destino, r))
+					{
 						destino = origen;
 					}else {
-						while(it2.hasNext() && !(destino.equals(origen)))
+						for(Par<Linea,Estacion> p : r.getCombinaciones(destino))
 						{
-							if(it2.next().getFirst().equals(origen))
-							{
-								lista.add(p.getFirst());
-								destino = origen;
-							}
-							else
-							{
-								LineasARecorrer(origen, it2.next().getFirst(), r, lista);
-							}
+							LineasARecorrer(origen, p.getFirst(), r, lista);
 						}
 					}
 				}
 				
-			}
 		}
-		
 		
 	}
