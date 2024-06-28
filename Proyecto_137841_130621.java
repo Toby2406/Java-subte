@@ -1,9 +1,7 @@
 package ar.edu.uns.cs.ed.proyectos.subtes.routing.proyecto;
 
 import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.Stack;
+
 
 import ar.edu.uns.cs.ed.proyectos.subtes.entities.Estacion;
 import ar.edu.uns.cs.ed.proyectos.subtes.entities.Linea;
@@ -22,6 +20,8 @@ import ar.edu.uns.cs.ed.proyectos.subtes.tdas.tdadiccionario.Entry;
 import ar.edu.uns.cs.ed.proyectos.subtes.tdas.tdalista.ListaDoblementeEnlazada;
 import ar.edu.uns.cs.ed.proyectos.subtes.tdas.tdalista.PositionList;
 import ar.edu.uns.cs.ed.proyectos.subtes.tdas.tdamapeo.*;
+import ar.edu.uns.cs.ed.proyectos.subtes.tdas.tdapila.*;
+
 /* TODO Proyecto_Tarea_1: Renombrar la clase ProyectoEjemplo siguiendo 
  * la siguiente convención: Proyecto_LU1_LU2
  * Usar Refactor > Rename en eclipse (de manera de que cambie también 
@@ -179,53 +179,60 @@ public class Proyecto_137841_130621 implements Proyecto{
 						.setDestinoAndBuild(destino, LDestino);
 			}
 			else {
-				Stack<Par<Linea,Estacion>> lista = new Stack<Par<Linea,Estacion>>();
+				PilaConLista<Par<Linea,Estacion>> lista = new PilaConLista<Par<Linea,Estacion>>();
 				Par<Linea,Estacion> p = new Par<Linea,Estacion>(LDestino,destino);
-				lista.add(p);
+				lista.push(p);
 				
 				LineasARecorrer(LOrige, LDestino, router, lista,p);
 				ForwardsMiddleEndBuilder aux = ViajeSubte.getForwardsBuilder().setOrigen(origen, LOrige);
 
 				Estacion estacionAux = origen;
 				Linea lineaAux = LOrige;
-				Estacion combinacion = lista.peek().getSecond();
-				
-				aux = aux.agregarDireccion(combinacion, buscarCabeceraDeAaB(origen, combinacion, LOrige),LDestino);
-				if(combinacion.equals(destino)) //Si la pila solo cuenta con el elemento de destino
-				{
-					v = ViajeSubte.getForwardsBuilder()
-							.setOrigen(origen, LDestino)
-							.agregarDireccion(destino, buscarCabeceraDeAaB(origen, destino, LDestino), LDestino)
-							.setDestinoAndBuild(destino, LDestino);
-				}else {
-					while(!lista.isEmpty())
+				Estacion combinacion;
+				try {
+					combinacion = lista.top().getSecond();
+					aux = aux.agregarDireccion(combinacion, buscarCabeceraDeAaB(origen, combinacion, LOrige),LDestino);
+					if(combinacion.equals(destino)) //Si la pila solo cuenta con el elemento de destino
 					{
-						Linea li = lista.peek().getFirst() ;//Linea de la combinacion
-						combinacion = lista.pop().getSecond();
-						
-						if(!li.equals(LDestino))
+						v = ViajeSubte.getForwardsBuilder()
+								.setOrigen(origen, LDestino)
+								.agregarDireccion(destino, buscarCabeceraDeAaB(origen, destino, LDestino), LDestino)
+								.setDestinoAndBuild(destino, LDestino);
+					}else {
+						while(!lista.isEmpty())
 						{
-							if(!LOrige.equals(LDestino))
+							Linea li = lista.top().getFirst() ;//Linea de la combinacion
+							combinacion = lista.pop().getSecond();
+							
+							if(!li.equals(LDestino))
 							{
-								aux = aux.agregarDireccion(combinacion, buscarCabeceraDeAaB(estacionAux, combinacion, lineaAux), li);
-							}
-							estacionAux = combinacion;
-							lineaAux = li;
-							aux = aux.agregarCombinacion(li);
-						}else
-						{
-							if(!LOrige.equals(LDestino))
-							{
-								if(!combinacion.equals(destino))
+								if(!LOrige.equals(LDestino))
 								{
-									aux = aux.agregarDireccion(destino, buscarCabeceraDeAaB(combinacion, destino, li), LDestino);
+									aux = aux.agregarDireccion(combinacion, buscarCabeceraDeAaB(estacionAux, combinacion, lineaAux), li);
 								}
+								estacionAux = combinacion;
+								lineaAux = li;
+								aux = aux.agregarCombinacion(li);
+							}else
+							{
+								if(!LOrige.equals(LDestino))
+								{
+									if(!combinacion.equals(destino))
+									{
+										aux = aux.agregarDireccion(destino, buscarCabeceraDeAaB(combinacion, destino, li), LDestino);
+									}
+								}
+								v = aux.setDestinoAndBuild(destino, LDestino);
 							}
-							v = aux.setDestinoAndBuild(destino, LDestino);
+						
 						}
-					
 					}
+				} catch (EmptyStackException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
 				}
+				
+
 			}				
 			return v;
 		}
@@ -335,15 +342,28 @@ public class Proyecto_137841_130621 implements Proyecto{
 			//SE GENERA UNA LISTA CON TODAS LAS LINEAS QUE SE DEBEN RECORRER PARA LLEGAR A DESTINO
 			//obtenemos las combinaciones de destino que tengan relacion con origen.
 				if(!origen.equals(destino)) {
-					if(!lista.peek().equals(par))
-					{
-						lista.add(par); 
+					try {
+						if(!lista.top().equals(par))
+						{
+							lista.push(par);; 
+						}
+					} catch (EmptyStackException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
 					}
 				
 					
 					if(!r.getCombinaciones(destino).iterator().hasNext())
 					{
-						lista.clear();	
+						while(!lista.isEmpty())
+						{
+							try {
+								lista.pop();
+							} catch (EmptyStackException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+						}
 					}
 					
 					if(EstanCombinadas(origen, destino, r))
