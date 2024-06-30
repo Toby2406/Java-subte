@@ -1,7 +1,8 @@
 package ar.edu.uns.cs.ed.proyectos.subtes.routing.proyecto;
 
 import java.util.Iterator;
-
+import java.util.LinkedList;
+import java.util.Queue;
 
 import ar.edu.uns.cs.ed.proyectos.subtes.entities.Estacion;
 import ar.edu.uns.cs.ed.proyectos.subtes.entities.Linea;
@@ -175,7 +176,7 @@ public class Proyecto_137841_130621 implements Proyecto{
 				
 				v = ViajeSubte.getForwardsBuilder()
 						.setOrigen(origen, LDestino)
-						.agregarDireccion(destino, buscarCabeceraDeAaB(origen, destino, LDestino), LDestino)
+						.agregarDireccion(destino, buscarCabeceraDeAaB(origen, destino, LOrige), LDestino)
 						.setDestinoAndBuild(destino, LDestino);
 			}
 			else {
@@ -183,56 +184,49 @@ public class Proyecto_137841_130621 implements Proyecto{
 				Par<Linea,Estacion> p = new Par<Linea,Estacion>(LDestino,destino);
 				lista.push(p);
 				
-				LineasARecorrer(LOrige, LDestino, router, lista,p);
+				
+				boolean bandera = false;
+				LineasARecorrer(bandera,LOrige, destino,router, lista, p);
 				ForwardsMiddleEndBuilder aux = ViajeSubte.getForwardsBuilder().setOrigen(origen, LOrige);
 
 				Estacion estacionAux = origen;
 				Linea lineaAux = LOrige;
 				Estacion combinacion;
-				try {
-					combinacion = lista.top().getSecond();
-					aux = aux.agregarDireccion(combinacion, buscarCabeceraDeAaB(origen, combinacion, LOrige),LDestino);
-					if(combinacion.equals(destino)) //Si la pila solo cuenta con el elemento de destino
-					{
-						v = ViajeSubte.getForwardsBuilder()
-								.setOrigen(origen, LDestino)
-								.agregarDireccion(destino, buscarCabeceraDeAaB(origen, destino, LDestino), LDestino)
-								.setDestinoAndBuild(destino, LDestino);
-					}else {
-						while(!lista.isEmpty())
+				try {		
+					while(!lista.isEmpty())
 						{
-							Linea li = lista.top().getFirst() ;//Linea de la combinacion
-							combinacion = lista.pop().getSecond();
+							Linea li;
 							
-							if(!li.equals(LDestino))
-							{
-								if(!LOrige.equals(LDestino))
+								li = lista.top().getFirst();
+								combinacion = lista.pop().getSecond();
+								
+								if(!li.equals(LDestino))
 								{
-									aux = aux.agregarDireccion(combinacion, buscarCabeceraDeAaB(estacionAux, combinacion, lineaAux), li);
-								}
-								estacionAux = combinacion;
-								lineaAux = li;
-								aux = aux.agregarCombinacion(li);
-							}else
-							{
-								if(!LOrige.equals(LDestino))
-								{
-									if(!combinacion.equals(destino))
+									if(!LOrige.equals(LDestino))
 									{
-										aux = aux.agregarDireccion(destino, buscarCabeceraDeAaB(combinacion, destino, li), LDestino);
+										aux = aux.agregarDireccion(combinacion, buscarCabeceraDeAaB(estacionAux, combinacion, lineaAux), li);
 									}
+									estacionAux = combinacion;
+									lineaAux = li;
+									aux = aux.agregarCombinacion(li);
+								}else
+								{
+									if(!LOrige.equals(LDestino))
+									{
+										
+										aux = aux.agregarDireccion(combinacion, buscarCabeceraDeAaB(estacionAux, combinacion, lineaAux), li);
+									}
+									v = aux.setDestinoAndBuild(combinacion, li);
 								}
-								v = aux.setDestinoAndBuild(destino, LDestino);
-							}
-						
-						}
+								
+							
+							
 					}
+					return v;
 				} catch (EmptyStackException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
-				}
-				
-
+				}//Linea de la combinacion
 			}				
 			return v;
 		}
@@ -249,7 +243,7 @@ public class Proyecto_137841_130621 implements Proyecto{
 			
 			Estacion cursor = A;
 			
-			while(cursor != null && resultado == l.getCabeceraInicial())
+			while(cursor != null && resultado.equals(l.getCabeceraInicial()))
 			{
 				if(cursor.equals(B))
 				{
@@ -286,8 +280,10 @@ public class Proyecto_137841_130621 implements Proyecto{
 			while(it.hasNext() && resultado == null)
 			{ 
 				Entry<Linea,Estacion> entrada = it.next();
-				if(entrada.getValue().equals(e))
+				if(entrada.getKey().getCabeceraInicial().equals(e) || entrada.getKey().getCabeceraFinal().equals(e))
 				{
+					resultado = entrada.getKey();
+				}else if(entrada.getValue().equals(e)){
 					resultado = entrada.getKey();
 				}
 			}
@@ -317,44 +313,42 @@ public class Proyecto_137841_130621 implements Proyecto{
 		}
 		
 		
-		protected Estacion EstacionCombinada(Linea origen, Linea destino, Router r)
+		protected boolean EstanEstacionCombinada(Estacion estacion,Linea li, Router r)
 		{//RETORNA LA ESTACION DONDE COLICIONAN AMBAS LINEAS	
-			Estacion resultado = null;
+			boolean resultado = false;
 			
-			Iterator<Par<Linea,Estacion>> it = r.getCombinaciones(origen).iterator();
+			Iterator<Par<Linea,Estacion>> it = r.getCombinaciones(li).iterator();
 			
-			while(it.hasNext() && resultado == null)
+			while(it.hasNext() && !resultado)
 			{
 			
 				Par<Linea,Estacion> p = it.next();
 				
-				if(p.getFirst().equals(destino))
+				if(p.getSecond().equals(estacion))
 				{
-					resultado = p.getSecond();
+					resultado = true;
 				}
 			}
 			
 			return resultado;
 		}
 		
-		protected void LineasARecorrer(Linea origen, Linea destino, Router r, Stack<Par<Linea,Estacion>> lista,Par<Linea,Estacion> par)
+		protected void LineasARecorrer(boolean encontre, Linea Lorigen,Estacion destino, Router r, PilaConLista<Par<Linea,Estacion>> lista,Par<Linea,Estacion> p)
 		{
 			//SE GENERA UNA LISTA CON TODAS LAS LINEAS QUE SE DEBEN RECORRER PARA LLEGAR A DESTINO
 			//obtenemos las combinaciones de destino que tengan relacion con origen.
-				if(!origen.equals(destino)) {
-					try {
-						if(!lista.top().equals(par))
-						{
-							lista.push(par);; 
-						}
-					} catch (EmptyStackException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				
+
+			
+			if(!encontre) {
 					
-					if(!r.getCombinaciones(destino).iterator().hasNext())
+				if(!p.getSecond().equals(destino))
+				{
+					lista.push(p);
+				}
+			 	
+					if(!r.getCombinaciones(p.getFirst()).iterator().hasNext())
 					{
+						//Vacio la pila
 						while(!lista.isEmpty())
 						{
 							try {
@@ -366,17 +360,19 @@ public class Proyecto_137841_130621 implements Proyecto{
 						}
 					}
 					
-					if(EstanCombinadas(origen, destino, r))
+					if((p.getFirst()).equals(Lorigen)) //La estacion pasada esta dentro de las combinaciones de Lorigen o es Lorigen
 					{
-						origen = destino;
+						 encontre = true;
+						
+						 
 					}else {
-						for(Par<Linea,Estacion> p : r.getCombinaciones(destino))
+						for(Par<Linea,Estacion> par : r.getCombinaciones(p.getFirst()))
 						{
-							LineasARecorrer(origen, p.getFirst(), r, lista,p);
+							LineasARecorrer(encontre, Lorigen, par.getSecond(), r, lista, par);
 						}
+					
 					}
 				}
-				
 		}
 		
 	}
